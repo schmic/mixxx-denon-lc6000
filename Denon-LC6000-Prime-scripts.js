@@ -74,6 +74,8 @@ LC6000Prime.kDeckColors = {
     4: {r: 0.78, g: 0.15, b: 1.0, a: 1.0},
 };
 
+LC6000Prime.kLedRingColor = {r: 0.11, g: 0.57, b: 1.0, a: 1.0};
+
 LC6000Prime.kDeckPadColors = {
     1: 0x09,
     2: 0x04,
@@ -373,7 +375,7 @@ LC6000Prime.setDisplayElementColor = function(elementId, color) {
 LC6000Prime.sendDisplayDefaultColors = function() {
     LC6000Prime.setDisplayElementColor(0, {r: 1.0, g: 1.0, b: 1.0, a: 0.85});
     LC6000Prime.setDisplayElementColor(1, LC6000Prime.state.deckColor);
-    LC6000Prime.setDisplayElementColor(2, LC6000Prime.state.deckColor);
+    LC6000Prime.setDisplayElementColor(2, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
     LC6000Prime.setDisplayElementColor(3, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
     LC6000Prime.setDisplayElementColor(4, {r: 0.0, g: 0.0, b: 0.0, a: 0.6});
     LC6000Prime.setDisplayElementColor(5, LC6000Prime.state.deckColor);
@@ -608,7 +610,7 @@ LC6000Prime.isRingNearEnd = function() {
 
 LC6000Prime.applyRingBlinkFrame = function() {
     LC6000Prime.sendRingColor(
-            LC6000Prime.state.ringBlinkVisible ? LC6000Prime.state.deckColor : null);
+            LC6000Prime.state.ringBlinkVisible ? LC6000Prime.kLedRingColor : null);
 };
 
 LC6000Prime.refreshRing = function() {
@@ -633,7 +635,7 @@ LC6000Prime.refreshRing = function() {
     }
 
     LC6000Prime.stopRingBlink();
-    LC6000Prime.sendRingColor(LC6000Prime.state.deckColor);
+    LC6000Prime.sendRingColor(LC6000Prime.kLedRingColor);
 };
 
 LC6000Prime.applyPadPress = function(index, value) {
