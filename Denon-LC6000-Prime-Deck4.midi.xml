@@ -636,7 +636,7 @@
                 <key>LC6000Prime.jogLsb</key>
                 <description>Jog wheel lower byte</description>
                 <status>0xB0</status>
-                <midino>0x36</midino>
+                <midino>0x31</midino>
                 <options>
                     <script-binding/>
                 </options>
@@ -646,7 +646,7 @@
                 <key>LC6000Prime.jogMsb</key>
                 <description>Jog wheel upper byte</description>
                 <status>0xB0</status>
-                <midino>0x37</midino>
+                <midino>0x11</midino>
                 <options>
                     <script-binding/>
                 </options>

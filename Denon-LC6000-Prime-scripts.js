@@ -55,8 +55,8 @@ LC6000Prime.kCC = {
     selectTurn: 0x06,
     pitchMsb: 0x08,
     pitchLsb: 0x28,
-    jogLsb: 0x36,
-    jogMsb: 0x37,
+    jogLsb: 0x31,
+    jogMsb: 0x11,
     needleScrub: 0x40,
 };
 
@@ -372,8 +372,8 @@ LC6000Prime.setDisplayElementColor = function(elementId, color) {
 
 LC6000Prime.sendDisplayDefaultColors = function() {
     LC6000Prime.setDisplayElementColor(0, {r: 1.0, g: 1.0, b: 1.0, a: 0.85});
-    LC6000Prime.setDisplayElementColor(1, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
-    LC6000Prime.setDisplayElementColor(2, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
+    LC6000Prime.setDisplayElementColor(1, LC6000Prime.state.deckColor);
+    LC6000Prime.setDisplayElementColor(2, LC6000Prime.state.deckColor);
     LC6000Prime.setDisplayElementColor(3, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
     LC6000Prime.setDisplayElementColor(4, {r: 0.0, g: 0.0, b: 0.0, a: 0.6});
     LC6000Prime.setDisplayElementColor(5, LC6000Prime.state.deckColor);
@@ -399,6 +399,7 @@ LC6000Prime.updateVisibleDisplayElements = function() {
     var slipEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.slipEnabled;
     var loopTextEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.showLoopText;
 
+    flags1 |= (logoEnabled || platterEnabled) ? (1 << 0) : 0;
     flags1 |= logoEnabled ? (1 << 1) : 0;
     flags1 |= platterEnabled ? (1 << 2) : 0;
     flags1 |= slipEnabled ? (1 << 4) : 0;
@@ -430,6 +431,24 @@ LC6000Prime.updateDisplaySlipPosition = function() {
         return;
     }
     LC6000Prime.sendPitchBend(1, LC6000Prime.state.trackLoaded ? LC6000Prime.state.playposition : 0.0);
+};
+
+LC6000Prime.refreshDisplayMotion = function() {
+    if (!LC6000Prime.state.enableDisplay) {
+        return;
+    }
+
+    if (LC6000Prime.state.trackLoaded) {
+        LC6000Prime.state.playposition = LC6000Prime.clamp(
+                engine.getValue(LC6000Prime.currentGroup(), "playposition"),
+                0.0,
+                1.0);
+    } else {
+        LC6000Prime.state.playposition = 0.0;
+    }
+
+    LC6000Prime.updateDisplayPlatterPosition();
+    LC6000Prime.updateDisplaySlipPosition();
 };
 
 LC6000Prime.clearLoopTextTimer = function() {
@@ -1347,10 +1366,12 @@ LC6000Prime.init = function(_id) {
         LC6000Prime.deviceInquiry(false);
         LC6000Prime.startImageDecoding();
         LC6000Prime.sendKeepAlive();
+        LC6000Prime.refreshDisplayMotion();
         LC6000Prime.keepAliveTimer = engine.beginTimer(
                 LC6000Prime.kKeepAliveIntervalMs,
                 function() {
                     LC6000Prime.sendKeepAlive();
+                    LC6000Prime.refreshDisplayMotion();
                 });
     }
 
