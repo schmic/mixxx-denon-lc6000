@@ -13,6 +13,7 @@ LC6000Prime.kJogSeekMultiplier = 24;
 LC6000Prime.kJogSensitivityCenter = 128;
 LC6000Prime.kLegacyNudgeSensitivityReference = 2;
 LC6000Prime.kLegacyScratchSensitivityReference = 16;
+LC6000Prime.kShiftScratchMultiplier = 4;
 LC6000Prime.kScratchScale = 0.75;
 LC6000Prime.kScratchAlpha = 1 / 8;
 LC6000Prime.kScratchBeta = LC6000Prime.kScratchAlpha / 32;
@@ -181,9 +182,11 @@ LC6000Prime.state = {
     selectPressed: false,
     selectTurnedWhilePressed: false,
     needleTouched: false,
+    platterTouched: false,
     pitchMsb: 0,
     jogMsb: 0,
     previousJogValue: -1,
+    scratchRemainder: 0.0,
     deckColor: LC6000Prime.kDeckColors[1],
     ringColor: LC6000Prime.kDeckColors[1],
     ringBlinkVisible: true,
@@ -369,10 +372,8 @@ LC6000Prime.getLoopMoveSize = function(group) {
 };
 
 LC6000Prime.toggleVinylMode = function() {
-    if (engine.isScratching(LC6000Prime.currentDeck())) {
-        engine.scratchDisable(LC6000Prime.currentDeck());
-    }
     LC6000Prime.state.vinylMode = !LC6000Prime.state.vinylMode;
+    LC6000Prime.syncScratchState();
     LC6000Prime.refreshTransportLeds();
 };
 
@@ -418,6 +419,30 @@ LC6000Prime.stopTrackSearch = function() {
 LC6000Prime.shiftBeatgridHalf = function(direction) {
     var control = direction < 0 ? "beats_translate_earlier" : "beats_translate_later";
     engine.setParameter(LC6000Prime.currentGroup(), control, LC6000Prime.kBeatgridHalfShift);
+};
+
+LC6000Prime.syncScratchState = function() {
+    var deck = LC6000Prime.currentDeck();
+    var shouldScratch = LC6000Prime.state.vinylMode &&
+            LC6000Prime.state.platterTouched;
+
+    if (shouldScratch) {
+        if (!engine.isScratching(deck)) {
+            LC6000Prime.state.scratchRemainder = 0.0;
+            engine.scratchEnable(
+                    deck,
+                    LC6000Prime.kJogTicksPerRevolution,
+                    33 + (1 / 3),
+                    LC6000Prime.kScratchAlpha,
+                    LC6000Prime.kScratchBeta);
+        }
+        return;
+    }
+
+    LC6000Prime.state.scratchRemainder = 0.0;
+    if (engine.isScratching(deck)) {
+        engine.scratchDisable(deck);
+    }
 };
 
 LC6000Prime.stopRingBlink = function() {
@@ -980,6 +1005,7 @@ LC6000Prime.pitchUp = function(_channel, _control, value) {
 
 LC6000Prime.shift = function(_channel, _control, value) {
     LC6000Prime.state.shift = value > 0;
+    LC6000Prime.syncScratchState();
     if (!LC6000Prime.state.shift) {
         LC6000Prime.stopTrackSearch();
     }
@@ -1045,20 +1071,8 @@ LC6000Prime.pad8 = function(_channel, _control, value) {
 };
 
 LC6000Prime.platterTouch = function(_channel, _control, value) {
-    var deck = LC6000Prime.currentDeck();
-    if (!LC6000Prime.state.vinylMode) {
-        return;
-    }
-    if (value > 0) {
-        engine.scratchEnable(
-                deck,
-                LC6000Prime.kJogTicksPerRevolution,
-                33 + (1 / 3),
-                LC6000Prime.kScratchAlpha,
-                LC6000Prime.kScratchBeta);
-    } else {
-        engine.scratchDisable(deck);
-    }
+    LC6000Prime.state.platterTouched = value > 0;
+    LC6000Prime.syncScratchState();
 };
 
 LC6000Prime.jogMsb = function(_channel, _control, value) {
@@ -1089,7 +1103,19 @@ LC6000Prime.jogLsb = function(_channel, _control, value) {
 
     if (engine.isScratching(deck)) {
         scaled = offset * LC6000Prime.currentScratchSensitivityScale();
-        engine.scratchTick(deck, scaled * LC6000Prime.kScratchScale);
+        LC6000Prime.state.scratchRemainder += scaled *
+                LC6000Prime.kScratchScale *
+                (LC6000Prime.state.shift ? LC6000Prime.kShiftScratchMultiplier : 1.0);
+
+        if (Math.abs(LC6000Prime.state.scratchRemainder) < 1.0) {
+            return;
+        }
+
+        scaled = LC6000Prime.state.scratchRemainder > 0
+                ? Math.floor(LC6000Prime.state.scratchRemainder)
+                : Math.ceil(LC6000Prime.state.scratchRemainder);
+        LC6000Prime.state.scratchRemainder -= scaled;
+        engine.scratchTick(deck, scaled);
         return;
     }
     scaled = offset * LC6000Prime.currentJogSensitivityScale();
