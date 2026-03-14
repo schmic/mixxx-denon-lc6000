@@ -3,7 +3,7 @@
     <info>
         <name>Denon LC6000 Prime</name>
         <author>schmic</author>
-        <description>Mixxx mapping for the Denon LC6000 Prime with selectable deck assignment, selectable deck color, transport, browse, jog, pitch, LEDs, center-display control, Hot Cue, Roll, and inferred Auto Loop pads.</description>
+        <description>Mixxx mapping for the Denon LC6000 Prime with selectable deck assignment, selectable deck color, transport, browse, jog, pitch, LEDs, Hot Cue, Roll, and inferred Auto Loop pads.</description>
     </info>
     <settings>
         <option variable="deckAssignment" type="enum" label="Deck assignment">
@@ -19,14 +19,7 @@
             <value>Blue</value>
             <value>Orange</value>
             <value>Purple</value>
-            <description>Color accent for the display and platter ring, based on the official LC6000 MIDI color examples.</description>
-        </option>
-        <option variable="screenBrightness" type="enum" label="Center display brightness">
-            <value>Low</value>
-            <value>Mid</value>
-            <value default="true">High</value>
-            <value>Max</value>
-            <description>Brightness value sent to the reconstructed LC6000 display SysEx path.</description>
+            <description>Color accent for the outer platter ring, based on the official LC6000 MIDI color examples.</description>
         </option>
         <option variable="vinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Vinyl-Mode">
             <description>Sensitivity factor for wheel movement while vinyl mode is enabled. 128 is the neutral midpoint.</description>
@@ -36,9 +29,6 @@
         </option>
         <option variable="vinylModeOn" type="boolean" default="true" label="Start in vinyl mode">
             <description>Whether the platter touch surface should enable scratching on startup.</description>
-        </option>
-        <option variable="enableDisplay" type="boolean" default="true" label="Enable center display SysEx">
-            <description>Disable this if you only want the standard MIDI mapping without the reconstructed display path.</description>
         </option>
     </settings>
     <controller id="Denon DJ LC6000 PRIME">

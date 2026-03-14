@@ -9,7 +9,7 @@ This repository provides:
 - one shared script file:
   - `Denon-LC6000-Prime-scripts.js`
 
-The preset exposes per-controller settings for deck assignment, deck color, jog sensitivity, vinyl mode, and display brightness.
+The preset exposes per-controller settings for deck assignment, deck color, jog sensitivity, and vinyl mode.
 
 ## Features
 
@@ -23,7 +23,7 @@ The preset exposes per-controller settings for deck assignment, deck color, jog 
 - Roll mode
 - Auto Loop mode
 - Needle search strip
-- Button, pad, platter ring, and center display feedback
+- Button, pad, and platter ring feedback
 
 ## Installation
 
@@ -52,11 +52,9 @@ Copy:
 
 - `Deck assignment`: `Deck 1` to `Deck 4`
 - `Deck color`: `Deck Default`, `Green`, `Blue`, `Orange`, `Purple`
-- `Center display brightness`: `Low`, `Mid`, `High`, `Max`
 - `Jog sensitivity, Vinyl-Mode`
 - `Jog sensitivity, Non-Vinyl-Mode`
 - `Start in vinyl mode`
-- `Enable center display SysEx`
 
 ## Multi-Controller Setup
 
@@ -166,7 +164,7 @@ Do not assign the same deck to two devices.
 - `Vinyl`: toggle vinyl mode
 - `Needle touch + strip`: absolute track position seek
 
-### LEDs and Display
+### LEDs
 
 - Main transport and mode LEDs follow Mixxx deck state
 - Pad LEDs reflect the current pad mode
@@ -174,18 +172,11 @@ Do not assign the same deck to two devices.
   - off while stopped
   - deck color while playing
   - blinking near the end of the track
-- The center display supports:
-  - brightness control
-  - platter position ring
-  - slip position ring
-  - loop size text
-  - basic deck color integration
 
 ## Notes
 
 - Deck assignment is handled by the selected preset file, not by an on-device deck assignment mode.
 - The mapping intentionally uses `Censor/Reverse` as `Reverse` on normal press and `Censor` on `Shift`.
-- The center display can be disabled per preset with `Enable center display SysEx`.
 
 ## Attribution
 

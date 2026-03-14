@@ -1,7 +1,5 @@
 var LC6000Prime = {};
 
-LC6000Prime.kKeepAliveIntervalMs = 40;
-LC6000Prime.kLoopTextHideMs = 1000;
 LC6000Prime.kRingBlinkIntervalMs = 400;
 LC6000Prime.kRingNearEndThreshold = 0.97;
 LC6000Prime.kTrackSearchIntervalMs = 50;
@@ -65,13 +63,6 @@ LC6000Prime.kCC = {
     needleScrub: 0x40,
 };
 
-LC6000Prime.kBrightnessValues = {
-    Low: 0x0F,
-    Mid: 0x46,
-    High: 0x69,
-    Max: 0x7F,
-};
-
 LC6000Prime.kDeckAssignments = {
     "Deck 1": 1,
     "Deck 2": 2,
@@ -93,10 +84,6 @@ LC6000Prime.kDeckColorChoices = {
     Orange: LC6000Prime.kDeckColors[3],
     Purple: LC6000Prime.kDeckColors[4],
 };
-
-LC6000Prime.kDisplayPlatterColor = {r: 1.0, g: 1.0, b: 1.0, a: 1.0};
-LC6000Prime.kDisplayPlatterHiddenColor = {r: 1.0, g: 1.0, b: 1.0, a: 0.0};
-LC6000Prime.kDisplaySlipRingAlpha = 0.35;
 
 LC6000Prime.kDeckPadColors = {
     1: 0x09,
@@ -167,49 +154,13 @@ LC6000Prime.kRollPadSizes = [
     2,
 ];
 
-LC6000Prime.kDisplayLoopTextMap = {
-    "0.015625": "1/64",
-    "0.03125": "1/32",
-    "0.0625": "1/16",
-    "0.125": "1/8",
-    "0.25": "1/4",
-    "0.5": "1/2",
-    "1": "1",
-    "2": "2",
-    "4": "4",
-    "8": "8",
-    "16": "16",
-    "32": "32",
-    "64": "64",
-};
-
-LC6000Prime.kDisplayLoopIndexMap = {
-    "1/64": 0x0,
-    "1/32": 0x1,
-    "1/16": 0x2,
-    "1/8": 0x3,
-    "1/4": 0x4,
-    "1/2": 0x5,
-    "1": 0x6,
-    "2": 0x7,
-    "4": 0x8,
-    "8": 0x9,
-    "16": 0xA,
-    "32": 0xB,
-    "64": 0xC,
-    "A": 0xE,
-    "B": 0xF,
-};
-
 LC6000Prime.state = {
     deckNumber: 1,
     group: "[Channel1]",
     deckAssignment: "Deck 1",
     deckColorSetting: "Deck Default",
-    screenBrightness: "High",
     vinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
     nonVinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
-    enableDisplay: true,
     vinylMode: true,
     padMode: "hotcue",
     trackLoaded: false,
@@ -231,8 +182,6 @@ LC6000Prime.state = {
     pitchMsb: 0,
     jogMsb: 0,
     previousJogValue: -1,
-    loopText: "",
-    showLoopText: false,
     deckColor: LC6000Prime.kDeckColors[1],
     ringColor: LC6000Prime.kDeckColors[1],
     ringBlinkVisible: true,
@@ -242,8 +191,6 @@ LC6000Prime.state = {
 };
 
 LC6000Prime.deckConnections = [];
-LC6000Prime.keepAliveTimer = 0;
-LC6000Prime.loopTextTimer = 0;
 LC6000Prime.ringBlinkTimer = 0;
 LC6000Prime.trackSearchTimer = 0;
 
@@ -310,23 +257,15 @@ LC6000Prime.readSettings = function() {
             String(engine.getSetting("deckAssignment") || "Deck 1"));
     var deckColorSetting = LC6000Prime.normalizeDeckColorSetting(
             String(engine.getSetting("deckColor") || "Deck Default"));
-    var brightnessSetting = String(engine.getSetting("screenBrightness") || "High");
-    var displaySetting = engine.getSetting("enableDisplay");
     var vinylSetting = engine.getSetting("vinylModeOn");
     var deckNumber = LC6000Prime.kDeckAssignments[deckAssignmentSetting];
-
-    if (Object.keys(LC6000Prime.kBrightnessValues).indexOf(brightnessSetting) === -1) {
-        brightnessSetting = "High";
-    }
 
     LC6000Prime.state.deckNumber = deckNumber;
     LC6000Prime.state.group = "[Channel" + deckNumber + "]";
     LC6000Prime.state.deckAssignment = deckAssignmentSetting;
     LC6000Prime.state.deckColorSetting = deckColorSetting;
-    LC6000Prime.state.screenBrightness = brightnessSetting;
     LC6000Prime.readJogSensitivitySettings();
     LC6000Prime.state.previousJogValue = -1;
-    LC6000Prime.state.enableDisplay = displaySetting !== false && displaySetting !== "false";
     LC6000Prime.state.vinylMode = vinylSetting !== false && vinylSetting !== "false";
     LC6000Prime.state.deckColor =
             LC6000Prime.kDeckColorChoices[deckColorSetting] ||
@@ -384,212 +323,6 @@ LC6000Prime.sendRingColor = function(color) {
 
 LC6000Prime.sendSysex = function(bytes) {
     midi.sendSysexMsg(bytes, bytes.length);
-};
-
-LC6000Prime.sendDisplayCommand = function(command, payload) {
-    var header = [0xF0, 0x00, 0x02, 0x0B, 0x01, 0x10, command, 0x00, payload.length];
-    LC6000Prime.sendSysex(header.concat(payload, [0xF7]));
-};
-
-LC6000Prime.sendControllerCommand = function(command, payload) {
-    var header = [0xF0, 0x00, 0x02, 0x0B, 0x00, 0x10, command, 0x00, payload.length];
-    LC6000Prime.sendSysex(header.concat(payload, [0xF7]));
-};
-
-LC6000Prime.deviceInquiry = function(broadcast) {
-    LC6000Prime.sendSysex([0xF0, 0x7E, broadcast ? 0x7F : 0x00, 0x06, 0x01, 0xF7]);
-};
-
-LC6000Prime.enterEngineOsMode = function(enabled) {
-    LC6000Prime.sendControllerCommand(0x50, [enabled ? 0x01 : 0x00]);
-};
-
-LC6000Prime.sendControllerInitialization = function() {
-    LC6000Prime.sendControllerCommand(0x04, []);
-};
-
-LC6000Prime.startImageDecoding = function() {
-    LC6000Prime.sendDisplayCommand(0x10, []);
-};
-
-LC6000Prime.sendKeepAlive = function() {
-    LC6000Prime.sendDisplayCommand(0x7F, []);
-};
-
-LC6000Prime.sendBrightness = function() {
-    LC6000Prime.sendDisplayCommand(
-            0x7C,
-            [LC6000Prime.kBrightnessValues[LC6000Prime.state.screenBrightness]]);
-};
-
-LC6000Prime.toNibblePair = function(byteValue) {
-    var value = LC6000Prime.clamp(Math.round(byteValue), 0, 255);
-    return [(value >> 4) & 0x0F, value & 0x0F];
-};
-
-LC6000Prime.colorPayload = function(color) {
-    return LC6000Prime.toNibblePair(color.a * 255)
-            .concat(LC6000Prime.toNibblePair(color.r * 255))
-            .concat(LC6000Prime.toNibblePair(color.g * 255))
-            .concat(LC6000Prime.toNibblePair(color.b * 255));
-};
-
-LC6000Prime.withAlpha = function(color, alpha) {
-    return {
-        r: color.r,
-        g: color.g,
-        b: color.b,
-        a: LC6000Prime.clamp(alpha, 0.0, 1.0),
-    };
-};
-
-LC6000Prime.setDisplayElementColor = function(elementId, color) {
-    LC6000Prime.sendDisplayCommand(0x0B, [elementId].concat(LC6000Prime.colorPayload(color)));
-};
-
-LC6000Prime.sendDisplayDefaultColors = function() {
-    LC6000Prime.setDisplayElementColor(0, {r: 1.0, g: 1.0, b: 1.0, a: 0.85});
-    LC6000Prime.setDisplayElementColor(1, LC6000Prime.state.deckColor);
-    LC6000Prime.setDisplayElementColor(2, LC6000Prime.kDisplayPlatterColor);
-    LC6000Prime.setDisplayElementColor(3, LC6000Prime.kDisplayPlatterColor);
-    LC6000Prime.setDisplayElementColor(
-            4,
-            LC6000Prime.withAlpha(LC6000Prime.state.deckColor, LC6000Prime.kDisplaySlipRingAlpha));
-    LC6000Prime.setDisplayElementColor(5, LC6000Prime.state.deckColor);
-    LC6000Prime.setDisplayElementColor(8, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
-};
-
-LC6000Prime.loopTextToIndex = function(text) {
-    if (LC6000Prime.kDisplayLoopIndexMap[text] !== undefined) {
-        return LC6000Prime.kDisplayLoopIndexMap[text];
-    }
-    return 0x0D;
-};
-
-LC6000Prime.updateVisibleDisplayElements = function() {
-    if (!LC6000Prime.state.enableDisplay) {
-        return;
-    }
-
-    var flags1 = 0x00;
-    var flags2 = 0x00;
-    var platterEnabled = LC6000Prime.state.trackLoaded;
-    var slipEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.slipEnabled;
-    var loopTextEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.showLoopText;
-
-    flags1 |= platterEnabled ? (1 << 2) : 0;
-    flags1 |= slipEnabled ? (1 << 4) : 0;
-    flags2 |= loopTextEnabled ? (1 << 1) : 0;
-
-    LC6000Prime.sendDisplayCommand(0x0A, [
-        flags1,
-        flags2,
-        0x00,
-        LC6000Prime.loopTextToIndex(LC6000Prime.state.loopText),
-    ]);
-};
-
-LC6000Prime.sendPitchBend = function(channel, normalizedValue) {
-    var value = LC6000Prime.clamp(Math.round(normalizedValue * 0x3FFF), 0, 0x3FFF);
-    LC6000Prime.sendShort(0xE0 + channel, value & 0x7F, (value >> 7) & 0x7F);
-};
-
-LC6000Prime.updateDisplayPlatterPosition = function() {
-    if (!LC6000Prime.state.enableDisplay) {
-        return;
-    }
-    LC6000Prime.sendPitchBend(0, LC6000Prime.state.trackLoaded ? LC6000Prime.state.playposition : 0.0);
-};
-
-LC6000Prime.updateDisplaySlipPosition = function() {
-    if (!LC6000Prime.state.enableDisplay) {
-        return;
-    }
-    LC6000Prime.sendPitchBend(1, LC6000Prime.state.trackLoaded ? LC6000Prime.state.playposition : 0.0);
-};
-
-LC6000Prime.applyDisplayPlatterBlinkFrame = function() {
-    var platterColor = LC6000Prime.state.ringBlinkVisible
-            ? LC6000Prime.kDisplayPlatterColor
-            : LC6000Prime.kDisplayPlatterHiddenColor;
-    LC6000Prime.setDisplayElementColor(2, platterColor);
-    LC6000Prime.setDisplayElementColor(3, platterColor);
-};
-
-LC6000Prime.refreshDisplayMotion = function() {
-    if (!LC6000Prime.state.enableDisplay) {
-        return;
-    }
-
-    if (LC6000Prime.state.trackLoaded) {
-        LC6000Prime.state.playposition = LC6000Prime.clamp(
-                engine.getValue(LC6000Prime.currentGroup(), "playposition"),
-                0.0,
-                1.0);
-    } else {
-        LC6000Prime.state.playposition = 0.0;
-    }
-
-    LC6000Prime.updateDisplayPlatterPosition();
-    LC6000Prime.updateDisplaySlipPosition();
-};
-
-LC6000Prime.clearLoopTextTimer = function() {
-    if (LC6000Prime.loopTextTimer !== 0) {
-        engine.stopTimer(LC6000Prime.loopTextTimer);
-        LC6000Prime.loopTextTimer = 0;
-    }
-};
-
-LC6000Prime.showLoopText = function() {
-    if (!LC6000Prime.state.enableDisplay) {
-        return;
-    }
-
-    LC6000Prime.clearLoopTextTimer();
-    LC6000Prime.state.showLoopText = LC6000Prime.state.trackLoaded;
-    LC6000Prime.updateVisibleDisplayElements();
-
-    if (!LC6000Prime.state.loopEnabled && LC6000Prime.state.trackLoaded) {
-        LC6000Prime.loopTextTimer = engine.beginTimer(
-                LC6000Prime.kLoopTextHideMs,
-                function() {
-                    LC6000Prime.state.showLoopText = false;
-                    LC6000Prime.loopTextTimer = 0;
-                    LC6000Prime.updateVisibleDisplayElements();
-                },
-                true);
-    }
-};
-
-LC6000Prime.formatLoopSize = function(value) {
-    var values = [
-        1 / 64,
-        1 / 32,
-        1 / 16,
-        1 / 8,
-        1 / 4,
-        1 / 2,
-        1,
-        2,
-        4,
-        8,
-        16,
-        32,
-        64,
-    ];
-    var closest = values[0];
-    var bestDelta = Math.abs(value - closest);
-
-    values.forEach(function(candidate) {
-        var delta = Math.abs(value - candidate);
-        if (delta < bestDelta) {
-            closest = candidate;
-            bestDelta = delta;
-        }
-    });
-
-    return LC6000Prime.kDisplayLoopTextMap[String(closest)] || "";
 };
 
 LC6000Prime.relativeSigned = function(value) {
@@ -697,14 +430,12 @@ LC6000Prime.isRingNearEnd = function() {
 LC6000Prime.applyRingBlinkFrame = function() {
     LC6000Prime.sendRingColor(
             LC6000Prime.state.ringBlinkVisible ? LC6000Prime.state.ringColor : null);
-    LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
 LC6000Prime.refreshRing = function() {
     if (!LC6000Prime.state.trackLoaded || !LC6000Prime.state.playIndicator) {
         LC6000Prime.stopRingBlink();
         LC6000Prime.sendRingColor(null);
-        LC6000Prime.applyDisplayPlatterBlinkFrame();
         return;
     }
 
@@ -724,7 +455,6 @@ LC6000Prime.refreshRing = function() {
 
     LC6000Prime.stopRingBlink();
     LC6000Prime.sendRingColor(LC6000Prime.state.ringColor);
-    LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
 LC6000Prime.applyPadPress = function(index, value) {
@@ -890,14 +620,6 @@ LC6000Prime.refreshAll = function() {
     LC6000Prime.refreshTransportLeds();
     LC6000Prime.refreshPads();
     LC6000Prime.refreshRing();
-
-    if (LC6000Prime.state.enableDisplay) {
-        LC6000Prime.sendBrightness();
-        LC6000Prime.sendDisplayDefaultColors();
-        LC6000Prime.updateVisibleDisplayElements();
-        LC6000Prime.updateDisplayPlatterPosition();
-        LC6000Prime.updateDisplaySlipPosition();
-    }
 };
 
 LC6000Prime.disconnectDeckConnections = function() {
@@ -946,20 +668,14 @@ LC6000Prime.onTrackLoadedChanged = function(value) {
     LC6000Prime.state.trackLoaded = value > 0;
     if (!LC6000Prime.state.trackLoaded) {
         LC6000Prime.state.playposition = 0.0;
-        LC6000Prime.state.showLoopText = false;
     }
     LC6000Prime.refreshTransportLeds();
     LC6000Prime.refreshRing();
-    LC6000Prime.updateVisibleDisplayElements();
-    LC6000Prime.updateDisplayPlatterPosition();
-    LC6000Prime.updateDisplaySlipPosition();
 };
 
 LC6000Prime.onPlaypositionChanged = function(value) {
     LC6000Prime.state.playposition = LC6000Prime.clamp(value, 0.0, 1.0);
     LC6000Prime.refreshRing();
-    LC6000Prime.updateDisplayPlatterPosition();
-    LC6000Prime.updateDisplaySlipPosition();
 };
 
 LC6000Prime.onPlayIndicatorChanged = function(value) {
@@ -991,28 +707,16 @@ LC6000Prime.onKeylockChanged = function(value) {
 LC6000Prime.onSlipEnabledChanged = function(value) {
     LC6000Prime.state.slipEnabled = value > 0;
     LC6000Prime.refreshTransportLeds();
-    LC6000Prime.updateVisibleDisplayElements();
 };
 
 LC6000Prime.onLoopEnabledChanged = function(value) {
     LC6000Prime.state.loopEnabled = value > 0;
     LC6000Prime.refreshTransportLeds();
-    if (LC6000Prime.state.loopEnabled) {
-        LC6000Prime.showLoopText();
-    } else if (LC6000Prime.state.showLoopText) {
-        LC6000Prime.showLoopText();
-    } else {
-        LC6000Prime.updateVisibleDisplayElements();
-    }
 };
 
 LC6000Prime.onBeatloopSizeChanged = function(value) {
     LC6000Prime.state.beatloopSize = value;
-    LC6000Prime.state.loopText = LC6000Prime.formatLoopSize(value);
     LC6000Prime.refreshPads();
-    if (LC6000Prime.state.loopText !== "") {
-        LC6000Prime.showLoopText();
-    }
 };
 
 LC6000Prime.onBeatjumpSizeChanged = function(value) {
@@ -1450,21 +1154,6 @@ LC6000Prime.needleScrub = function(_channel, _control, value) {
 LC6000Prime.init = function(_id) {
     LC6000Prime.readSettings();
 
-    if (LC6000Prime.state.enableDisplay) {
-        LC6000Prime.enterEngineOsMode(true);
-        LC6000Prime.sendControllerInitialization();
-        LC6000Prime.deviceInquiry(false);
-        LC6000Prime.startImageDecoding();
-        LC6000Prime.sendKeepAlive();
-        LC6000Prime.refreshDisplayMotion();
-        LC6000Prime.keepAliveTimer = engine.beginTimer(
-                LC6000Prime.kKeepAliveIntervalMs,
-                function() {
-                    LC6000Prime.sendKeepAlive();
-                    LC6000Prime.refreshDisplayMotion();
-                });
-    }
-
     LC6000Prime.bindDeckConnections();
     LC6000Prime.refreshAll();
     console.log("LC6000Prime initialized for " + LC6000Prime.currentGroup());
@@ -1484,23 +1173,7 @@ LC6000Prime.init = function(_id) {
 LC6000Prime.shutdown = function() {
     LC6000Prime.stopTrackSearch();
     LC6000Prime.stopRingBlink();
-    LC6000Prime.clearLoopTextTimer();
     LC6000Prime.disconnectDeckConnections();
 
-    if (LC6000Prime.keepAliveTimer !== 0) {
-        engine.stopTimer(LC6000Prime.keepAliveTimer);
-        LC6000Prime.keepAliveTimer = 0;
-    }
-
     LC6000Prime.clearAllLeds();
-
-    if (LC6000Prime.state.enableDisplay) {
-        LC6000Prime.state.trackLoaded = false;
-        LC6000Prime.state.showLoopText = false;
-        LC6000Prime.updateVisibleDisplayElements();
-        LC6000Prime.updateDisplayPlatterPosition();
-        LC6000Prime.updateDisplaySlipPosition();
-        LC6000Prime.deviceInquiry(true);
-        LC6000Prime.enterEngineOsMode(false);
-    }
 };
