@@ -22,10 +22,10 @@
             <description>Color accent for the outer platter ring, based on the official LC6000 MIDI color examples.</description>
         </option>
         <option variable="vinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Vinyl-Mode">
-            <description>Sensitivity factor for wheel movement while vinyl mode is enabled. 128 is the neutral midpoint.</description>
+            <description>Sensitivity factor for scratching with platter touch. 128 is the neutral midpoint and matches the previously usable value 16.</description>
         </option>
         <option variable="nonVinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Non-Vinyl-Mode">
-            <description>Sensitivity factor for wheel movement while vinyl mode is disabled. 128 is the neutral midpoint.</description>
+            <description>Sensitivity factor for non-touch wheel movement. 128 is the neutral midpoint and matches the previously usable value 2.</description>
         </option>
         <option variable="vinylModeOn" type="boolean" default="true" label="Start in vinyl mode">
             <description>Whether the platter touch surface should enable scratching on startup.</description>
