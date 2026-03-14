@@ -4,12 +4,14 @@ Custom Mixxx controller mapping for the Denon LC6000 Prime.
 
 This repository provides:
 
-- one Mixxx preset:
+- two Mixxx presets:
   - `Denon-LC6000-Prime.midi.xml`
-- one shared script file:
+  - `Denon-LC6000-Prime-Display.midi.xml`
+- two script files:
   - `Denon-LC6000-Prime-scripts.js`
+  - `Denon-LC6000-Prime-Display-scripts.js`
 
-The preset exposes per-controller settings for deck assignment, deck color, jog sensitivity, and vinyl mode.
+The PR preset exposes per-controller settings for deck assignment, deck color, jog sensitivity, and vinyl mode. The WD preset exposes deck assignment, deck color, and display brightness.
 
 ## Features
 
@@ -24,6 +26,7 @@ The preset exposes per-controller settings for deck assignment, deck color, jog 
 - Auto Loop mode
 - Needle search strip
 - Button, pad, and platter ring feedback
+- Optional second WD preset for center-display ring, slip ring, and loop text
 
 ## Installation
 
@@ -41,14 +44,18 @@ Copy:
 
 - `Denon-LC6000-Prime.midi.xml`
 - `Denon-LC6000-Prime-scripts.js`
+- `Denon-LC6000-Prime-Display.midi.xml`
+- `Denon-LC6000-Prime-Display-scripts.js`
 
 2. Start Mixxx.
 
 3. Open `Preferences` -> `Controllers`.
 
-4. For each connected LC6000, select the preset `Denon LC6000 Prime`.
+4. For each connected LC6000 `PR` port, select the preset `Denon LC6000 Prime`.
 
-5. Configure the controller settings for each unit if needed:
+5. Optional: for each connected LC6000 `WD` port, select the preset `Denon LC6000 Prime Display`.
+
+6. Configure the controller settings for each unit if needed:
 
 - `Deck assignment`: `Deck 1` to `Deck 4`
 - `Deck color`: `Deck Default`, `Green`, `Blue`, `Orange`, `Purple`
@@ -56,16 +63,25 @@ Copy:
 - `Jog sensitivity, Non-Vinyl-Mode`
 - `Start in vinyl mode`
 
+7. If you use the display preset on `WD`, configure the same `Deck assignment` there as on the `PR` preset. Otherwise controls and display will point to different Mixxx decks.
+
 ## Multi-Controller Setup
 
-Use one preset per physical LC6000.
+Use one PR preset per physical LC6000. Add one WD preset per physical LC6000 if you also want center-display feedback.
 
 Example for a two-deck setup:
 
-- LC6000 #1 -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 1`
-- LC6000 #2 -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 2`
+- LC6000 #1 PR -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 1`
+- LC6000 #1 WD -> preset `Denon LC6000 Prime Display`, setting `Deck assignment = Deck 1`
+- LC6000 #2 PR -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 2`
+- LC6000 #2 WD -> preset `Denon LC6000 Prime Display`, setting `Deck assignment = Deck 2`
 
 Do not assign the same deck to two devices.
+
+On the tested Linux setup the ports appear as:
+
+- `Denon DJ LC6000 PRIME LC6000 PR`
+- `Denon DJ LC6000 PRIME WD MIDI 1`
 
 ## Controls
 
@@ -173,9 +189,21 @@ Do not assign the same deck to two devices.
   - deck color while playing
   - blinking near the end of the track
 
+## WD Display Preset
+
+The optional `Denon LC6000 Prime Display` preset is meant for the separate `WD` MIDI device. It currently drives:
+
+- outer display platter position
+- slip ring visibility
+- loop size text
+- display brightness and default colors
+
+It does not yet upload artwork or logos.
+
 ## Notes
 
 - Deck assignment is handled by the selected preset file, not by an on-device deck assignment mode.
+- Mixxx still treats `PR` and `WD` as separate assigned devices. The display works by giving the WD port its own preset, not by discovering the second port from inside one script.
 - The mapping intentionally uses `Censor/Reverse` as `Reverse` on normal press and `Censor` on `Shift`.
 
 ## Attribution
