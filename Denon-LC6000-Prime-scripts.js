@@ -75,6 +75,9 @@ LC6000Prime.kDeckColors = {
 };
 
 LC6000Prime.kLedRingColor = {r: 0.11, g: 0.57, b: 1.0, a: 1.0};
+LC6000Prime.kDisplayPlatterColor = {r: 1.0, g: 1.0, b: 1.0, a: 1.0};
+LC6000Prime.kDisplayPlatterHiddenColor = {r: 1.0, g: 1.0, b: 1.0, a: 0.0};
+LC6000Prime.kDisplaySlipRingAlpha = 0.35;
 
 LC6000Prime.kDeckPadColors = {
     1: 0x09,
@@ -368,6 +371,15 @@ LC6000Prime.colorPayload = function(color) {
             .concat(LC6000Prime.toNibblePair(color.b * 255));
 };
 
+LC6000Prime.withAlpha = function(color, alpha) {
+    return {
+        r: color.r,
+        g: color.g,
+        b: color.b,
+        a: LC6000Prime.clamp(alpha, 0.0, 1.0),
+    };
+};
+
 LC6000Prime.setDisplayElementColor = function(elementId, color) {
     LC6000Prime.sendDisplayCommand(0x0B, [elementId].concat(LC6000Prime.colorPayload(color)));
 };
@@ -375,9 +387,11 @@ LC6000Prime.setDisplayElementColor = function(elementId, color) {
 LC6000Prime.sendDisplayDefaultColors = function() {
     LC6000Prime.setDisplayElementColor(0, {r: 1.0, g: 1.0, b: 1.0, a: 0.85});
     LC6000Prime.setDisplayElementColor(1, LC6000Prime.state.deckColor);
-    LC6000Prime.setDisplayElementColor(2, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
-    LC6000Prime.setDisplayElementColor(3, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
-    LC6000Prime.setDisplayElementColor(4, {r: 0.0, g: 0.0, b: 0.0, a: 0.6});
+    LC6000Prime.setDisplayElementColor(2, LC6000Prime.kDisplayPlatterColor);
+    LC6000Prime.setDisplayElementColor(3, LC6000Prime.kDisplayPlatterColor);
+    LC6000Prime.setDisplayElementColor(
+            4,
+            LC6000Prime.withAlpha(LC6000Prime.state.deckColor, LC6000Prime.kDisplaySlipRingAlpha));
     LC6000Prime.setDisplayElementColor(5, LC6000Prime.state.deckColor);
     LC6000Prime.setDisplayElementColor(8, {r: 1.0, g: 1.0, b: 1.0, a: 1.0});
 };
@@ -396,16 +410,12 @@ LC6000Prime.updateVisibleDisplayElements = function() {
 
     var flags1 = 0x00;
     var flags2 = 0x00;
-    var logoEnabled = !LC6000Prime.state.trackLoaded;
     var platterEnabled = LC6000Prime.state.trackLoaded;
     var slipEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.slipEnabled;
     var loopTextEnabled = LC6000Prime.state.trackLoaded && LC6000Prime.state.showLoopText;
 
-    flags1 |= (logoEnabled || platterEnabled) ? (1 << 0) : 0;
-    flags1 |= logoEnabled ? (1 << 1) : 0;
     flags1 |= platterEnabled ? (1 << 2) : 0;
     flags1 |= slipEnabled ? (1 << 4) : 0;
-    flags1 |= slipEnabled ? (1 << 5) : 0;
     flags2 |= loopTextEnabled ? (1 << 1) : 0;
 
     LC6000Prime.sendDisplayCommand(0x0A, [
@@ -433,6 +443,14 @@ LC6000Prime.updateDisplaySlipPosition = function() {
         return;
     }
     LC6000Prime.sendPitchBend(1, LC6000Prime.state.trackLoaded ? LC6000Prime.state.playposition : 0.0);
+};
+
+LC6000Prime.applyDisplayPlatterBlinkFrame = function() {
+    var platterColor = LC6000Prime.state.ringBlinkVisible
+            ? LC6000Prime.kDisplayPlatterColor
+            : LC6000Prime.kDisplayPlatterHiddenColor;
+    LC6000Prime.setDisplayElementColor(2, platterColor);
+    LC6000Prime.setDisplayElementColor(3, platterColor);
 };
 
 LC6000Prime.refreshDisplayMotion = function() {
@@ -611,12 +629,14 @@ LC6000Prime.isRingNearEnd = function() {
 LC6000Prime.applyRingBlinkFrame = function() {
     LC6000Prime.sendRingColor(
             LC6000Prime.state.ringBlinkVisible ? LC6000Prime.kLedRingColor : null);
+    LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
 LC6000Prime.refreshRing = function() {
     if (!LC6000Prime.state.trackLoaded || !LC6000Prime.state.playIndicator) {
         LC6000Prime.stopRingBlink();
         LC6000Prime.sendRingColor(null);
+        LC6000Prime.applyDisplayPlatterBlinkFrame();
         return;
     }
 
@@ -636,6 +656,7 @@ LC6000Prime.refreshRing = function() {
 
     LC6000Prime.stopRingBlink();
     LC6000Prime.sendRingColor(LC6000Prime.kLedRingColor);
+    LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
 LC6000Prime.applyPadPress = function(index, value) {
