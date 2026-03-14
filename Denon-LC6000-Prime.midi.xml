@@ -1,13 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MixxxControllerPreset schemaVersion="1" mixxxVersion="2.5">
     <info>
-        <name>Denon LC6000 Prime Deck 3</name>
+        <name>Denon LC6000 Prime</name>
         <author>schmic</author>
-        <description>Mixxx mapping for the Denon LC6000 Prime fixed to Deck 3, with transport, browse, jog, pitch, LEDs, center-display control, Hot Cue, Roll, and inferred Auto Loop pads.</description>
+        <description>Mixxx mapping for the Denon LC6000 Prime with selectable deck assignment, selectable deck color, transport, browse, jog, pitch, LEDs, center-display control, Hot Cue, Roll, and inferred Auto Loop pads.</description>
     </info>
     <settings>
-        <option variable="deckNumber" type="integer" min="3" max="3" default="3" label="Fixed controlled deck">
-            <description>This preset is fixed to Mixxx Deck 3.</description>
+        <option variable="deckAssignment" type="enum" label="Deck assignment">
+            <value default="true">Deck 1</value>
+            <value>Deck 2</value>
+            <value>Deck 3</value>
+            <value>Deck 4</value>
+            <description>Select which Mixxx deck this LC6000 should control.</description>
+        </option>
+        <option variable="deckColor" type="enum" label="Deck color">
+            <value default="true">Deck Default</value>
+            <value>Green</value>
+            <value>Blue</value>
+            <value>Orange</value>
+            <value>Purple</value>
+            <description>Color accent for the display and platter ring, based on the official LC6000 MIDI color examples.</description>
         </option>
         <option variable="screenBrightness" type="enum" label="Center display brightness">
             <value>Low</value>
@@ -16,8 +28,11 @@
             <value>Max</value>
             <description>Brightness value sent to the reconstructed LC6000 display SysEx path.</description>
         </option>
-        <option variable="jogSensitivity" type="real" min="0.1" max="10.0" default="1.0" label="Jog sensitivity">
-            <description>Sensitivity factor for jog ticks when the platter is not scratching.</description>
+        <option variable="vinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Vinyl-Mode">
+            <description>Sensitivity factor for wheel movement while vinyl mode is enabled. 128 is the neutral midpoint.</description>
+        </option>
+        <option variable="nonVinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Non-Vinyl-Mode">
+            <description>Sensitivity factor for wheel movement while vinyl mode is disabled. 128 is the neutral midpoint.</description>
         </option>
         <option variable="vinylModeOn" type="boolean" default="true" label="Start in vinyl mode">
             <description>Whether the platter touch surface should enable scratching on startup.</description>

@@ -4,15 +4,12 @@ Custom Mixxx controller mapping for the Denon LC6000 Prime.
 
 This repository provides:
 
-- four fixed deck presets:
-  - `Denon-LC6000-Prime-Deck1.midi.xml`
-  - `Denon-LC6000-Prime-Deck2.midi.xml`
-  - `Denon-LC6000-Prime-Deck3.midi.xml`
-  - `Denon-LC6000-Prime-Deck4.midi.xml`
+- one Mixxx preset:
+  - `Denon-LC6000-Prime.midi.xml`
 - one shared script file:
   - `Denon-LC6000-Prime-scripts.js`
 
-Each preset is permanently assigned to one Mixxx deck. This is the recommended setup when using two or more LC6000 units at the same time.
+The preset exposes per-controller settings for deck assignment, deck color, jog sensitivity, vinyl mode, and display brightness.
 
 ## Features
 
@@ -42,27 +39,22 @@ Common locations:
 
 Copy:
 
-- `Denon-LC6000-Prime-Deck1.midi.xml`
-- `Denon-LC6000-Prime-Deck2.midi.xml`
-- `Denon-LC6000-Prime-Deck3.midi.xml`
-- `Denon-LC6000-Prime-Deck4.midi.xml`
+- `Denon-LC6000-Prime.midi.xml`
 - `Denon-LC6000-Prime-scripts.js`
 
 2. Start Mixxx.
 
 3. Open `Preferences` -> `Controllers`.
 
-4. For each connected LC6000, select the matching preset:
-
-- left unit: `Denon LC6000 Prime Deck 1`
-- right unit: `Denon LC6000 Prime Deck 2`
-- optional third unit: `Denon LC6000 Prime Deck 3`
-- optional fourth unit: `Denon LC6000 Prime Deck 4`
+4. For each connected LC6000, select the preset `Denon LC6000 Prime`.
 
 5. Configure the controller settings for each unit if needed:
 
+- `Deck assignment`: `Deck 1` to `Deck 4`
+- `Deck color`: `Deck Default`, `Green`, `Blue`, `Orange`, `Purple`
 - `Center display brightness`: `Low`, `Mid`, `High`, `Max`
-- `Jog sensitivity`
+- `Jog sensitivity, Vinyl-Mode`
+- `Jog sensitivity, Non-Vinyl-Mode`
 - `Start in vinyl mode`
 - `Enable center display SysEx`
 
@@ -72,10 +64,10 @@ Use one preset per physical LC6000.
 
 Example for a two-deck setup:
 
-- LC6000 #1 -> `Denon LC6000 Prime Deck 1`
-- LC6000 #2 -> `Denon LC6000 Prime Deck 2`
+- LC6000 #1 -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 1`
+- LC6000 #2 -> preset `Denon LC6000 Prime`, setting `Deck assignment = Deck 2`
 
-Do not assign the same deck preset to two devices.
+Do not assign the same deck to two devices.
 
 ## Controls
 

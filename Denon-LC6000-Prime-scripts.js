@@ -6,9 +6,14 @@ LC6000Prime.kRingBlinkIntervalMs = 400;
 LC6000Prime.kRingNearEndThreshold = 0.97;
 LC6000Prime.kTrackSearchIntervalMs = 50;
 LC6000Prime.kTrackSearchStep = 0.01;
+LC6000Prime.kBeatgridHalfShift = 0.5;
 LC6000Prime.kJogTicksPerRevolution = 1100;
-LC6000Prime.kJogNudgeMultiplier = 6;
+LC6000Prime.kJogNudgeMultiplier = 4;
+LC6000Prime.kJogNudgeScale = 0.5;
+LC6000Prime.kPlayingJogNudgeScale = 0.5;
 LC6000Prime.kJogSeekMultiplier = 24;
+LC6000Prime.kJogSensitivityCenter = 128;
+LC6000Prime.kScratchScale = 0.75;
 LC6000Prime.kScratchAlpha = 1 / 8;
 LC6000Prime.kScratchBeta = LC6000Prime.kScratchAlpha / 32;
 LC6000Prime.kRgbGamma = 3.5;
@@ -67,6 +72,13 @@ LC6000Prime.kBrightnessValues = {
     Max: 0x7F,
 };
 
+LC6000Prime.kDeckAssignments = {
+    "Deck 1": 1,
+    "Deck 2": 2,
+    "Deck 3": 3,
+    "Deck 4": 4,
+};
+
 LC6000Prime.kDeckColors = {
     1: {r: 0.01, g: 0.91, b: 0.44, a: 1.0},
     2: {r: 0.11, g: 0.57, b: 1.0, a: 1.0},
@@ -74,7 +86,14 @@ LC6000Prime.kDeckColors = {
     4: {r: 0.78, g: 0.15, b: 1.0, a: 1.0},
 };
 
-LC6000Prime.kLedRingColor = {r: 0.11, g: 0.57, b: 1.0, a: 1.0};
+LC6000Prime.kDeckColorChoices = {
+    "Deck Default": null,
+    Green: LC6000Prime.kDeckColors[1],
+    Blue: LC6000Prime.kDeckColors[2],
+    Orange: LC6000Prime.kDeckColors[3],
+    Purple: LC6000Prime.kDeckColors[4],
+};
+
 LC6000Prime.kDisplayPlatterColor = {r: 1.0, g: 1.0, b: 1.0, a: 1.0};
 LC6000Prime.kDisplayPlatterHiddenColor = {r: 1.0, g: 1.0, b: 1.0, a: 0.0};
 LC6000Prime.kDisplaySlipRingAlpha = 0.35;
@@ -185,8 +204,11 @@ LC6000Prime.kDisplayLoopIndexMap = {
 LC6000Prime.state = {
     deckNumber: 1,
     group: "[Channel1]",
+    deckAssignment: "Deck 1",
+    deckColorSetting: "Deck Default",
     screenBrightness: "High",
-    jogSensitivity: 1.0,
+    vinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
+    nonVinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
     enableDisplay: true,
     vinylMode: true,
     padMode: "hotcue",
@@ -212,6 +234,7 @@ LC6000Prime.state = {
     loopText: "",
     showLoopText: false,
     deckColor: LC6000Prime.kDeckColors[1],
+    ringColor: LC6000Prime.kDeckColors[1],
     ringBlinkVisible: true,
     hotcueEnabled: [false, false, false, false, false, false, false, false],
     activeRollPads: [false, false, false, false, false, false, false, false],
@@ -244,32 +267,72 @@ LC6000Prime.trigger = function(group, control) {
     script.triggerControl(group, control);
 };
 
+LC6000Prime.normalizeJogSensitivity = function(value) {
+    if (!Number.isInteger(value) || value < 1 || value > 255) {
+        return LC6000Prime.kJogSensitivityCenter;
+    }
+    return value;
+};
+
+LC6000Prime.normalizeDeckAssignment = function(value) {
+    if (Object.prototype.hasOwnProperty.call(LC6000Prime.kDeckAssignments, value)) {
+        return value;
+    }
+    return "Deck 1";
+};
+
+LC6000Prime.normalizeDeckColorSetting = function(value) {
+    if (Object.prototype.hasOwnProperty.call(LC6000Prime.kDeckColorChoices, value)) {
+        return value;
+    }
+    return "Deck Default";
+};
+
+LC6000Prime.currentJogSensitivityScale = function() {
+    var setting = LC6000Prime.state.vinylMode
+            ? LC6000Prime.state.vinylJogSensitivity
+            : LC6000Prime.state.nonVinylJogSensitivity;
+    return setting / LC6000Prime.kJogSensitivityCenter;
+};
+
+LC6000Prime.readJogSensitivitySettings = function() {
+    var vinylJogSetting = Number(engine.getSetting("vinylJogSensitivity"));
+    var nonVinylJogSetting = Number(engine.getSetting("nonVinylJogSensitivity"));
+    vinylJogSetting = LC6000Prime.normalizeJogSensitivity(vinylJogSetting);
+    nonVinylJogSetting = LC6000Prime.normalizeJogSensitivity(nonVinylJogSetting);
+
+    LC6000Prime.state.vinylJogSensitivity = vinylJogSetting;
+    LC6000Prime.state.nonVinylJogSensitivity = nonVinylJogSetting;
+};
+
 LC6000Prime.readSettings = function() {
-    var deckSetting = Number(engine.getSetting("deckNumber"));
+    var deckAssignmentSetting = LC6000Prime.normalizeDeckAssignment(
+            String(engine.getSetting("deckAssignment") || "Deck 1"));
+    var deckColorSetting = LC6000Prime.normalizeDeckColorSetting(
+            String(engine.getSetting("deckColor") || "Deck Default"));
     var brightnessSetting = String(engine.getSetting("screenBrightness") || "High");
-    var jogSetting = Number(engine.getSetting("jogSensitivity"));
     var displaySetting = engine.getSetting("enableDisplay");
     var vinylSetting = engine.getSetting("vinylModeOn");
+    var deckNumber = LC6000Prime.kDeckAssignments[deckAssignmentSetting];
 
-    if (!Number.isInteger(deckSetting) || deckSetting < 1 || deckSetting > 4) {
-        deckSetting = 1;
-    }
     if (Object.keys(LC6000Prime.kBrightnessValues).indexOf(brightnessSetting) === -1) {
         brightnessSetting = "High";
     }
-    if (!Number.isFinite(jogSetting) || jogSetting <= 0) {
-        jogSetting = 1.0;
-    }
 
-    LC6000Prime.state.deckNumber = deckSetting;
-    LC6000Prime.state.group = "[Channel" + deckSetting + "]";
+    LC6000Prime.state.deckNumber = deckNumber;
+    LC6000Prime.state.group = "[Channel" + deckNumber + "]";
+    LC6000Prime.state.deckAssignment = deckAssignmentSetting;
+    LC6000Prime.state.deckColorSetting = deckColorSetting;
     LC6000Prime.state.screenBrightness = brightnessSetting;
-    LC6000Prime.state.jogSensitivity = jogSetting;
+    LC6000Prime.readJogSensitivitySettings();
     LC6000Prime.state.previousJogValue = -1;
     LC6000Prime.state.enableDisplay = displaySetting !== false && displaySetting !== "false";
     LC6000Prime.state.vinylMode = vinylSetting !== false && vinylSetting !== "false";
     LC6000Prime.state.deckColor =
-            LC6000Prime.kDeckColors[deckSetting] || LC6000Prime.kDeckColors[1];
+            LC6000Prime.kDeckColorChoices[deckColorSetting] ||
+            LC6000Prime.kDeckColors[deckNumber] ||
+            LC6000Prime.kDeckColors[1];
+    LC6000Prime.state.ringColor = LC6000Prime.state.deckColor;
 };
 
 LC6000Prime.sendShort = function(status, number, value) {
@@ -612,6 +675,11 @@ LC6000Prime.stopTrackSearch = function() {
     }
 };
 
+LC6000Prime.shiftBeatgridHalf = function(direction) {
+    var control = direction < 0 ? "beats_translate_earlier" : "beats_translate_later";
+    engine.setParameter(LC6000Prime.currentGroup(), control, LC6000Prime.kBeatgridHalfShift);
+};
+
 LC6000Prime.stopRingBlink = function() {
     if (LC6000Prime.ringBlinkTimer !== 0) {
         engine.stopTimer(LC6000Prime.ringBlinkTimer);
@@ -628,7 +696,7 @@ LC6000Prime.isRingNearEnd = function() {
 
 LC6000Prime.applyRingBlinkFrame = function() {
     LC6000Prime.sendRingColor(
-            LC6000Prime.state.ringBlinkVisible ? LC6000Prime.kLedRingColor : null);
+            LC6000Prime.state.ringBlinkVisible ? LC6000Prime.state.ringColor : null);
     LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
@@ -655,7 +723,7 @@ LC6000Prime.refreshRing = function() {
     }
 
     LC6000Prime.stopRingBlink();
-    LC6000Prime.sendRingColor(LC6000Prime.kLedRingColor);
+    LC6000Prime.sendRingColor(LC6000Prime.state.ringColor);
     LC6000Prime.applyDisplayPlatterBlinkFrame();
 };
 
@@ -866,7 +934,7 @@ LC6000Prime.bindDeckConnections = function() {
 
     for (i = 1; i <= 8; i++) {
         (function(index) {
-            LC6000Prime.connectDeckControl("hotcue_" + index + "_enabled", function(value) {
+            LC6000Prime.connectDeckControl("hotcue_" + index + "_status", function(value) {
                 LC6000Prime.state.hotcueEnabled[index - 1] = value > 0;
                 LC6000Prime.refreshPads();
             });
@@ -971,9 +1039,7 @@ LC6000Prime.play = function(_channel, _control, value) {
 LC6000Prime.cue = function(_channel, _control, value) {
     var group = LC6000Prime.currentGroup();
     if (LC6000Prime.state.shift) {
-        if (LC6000Prime.isPress(value)) {
-            LC6000Prime.trigger(group, "cue_set");
-        }
+        engine.setValue(group, "start_stop", value > 0 ? 1 : 0);
         return;
     }
     engine.setValue(group, "cue_default", value > 0 ? 1 : 0);
@@ -983,9 +1049,7 @@ LC6000Prime.trackSkipPrev = function(_channel, _control, value) {
     var group = LC6000Prime.currentGroup();
     if (LC6000Prime.state.shift) {
         if (LC6000Prime.isPress(value)) {
-            LC6000Prime.startTrackSearch(-1);
-        } else {
-            LC6000Prime.stopTrackSearch();
+            LC6000Prime.shiftBeatgridHalf(-1);
         }
         return;
     }
@@ -1004,9 +1068,7 @@ LC6000Prime.trackSkipNext = function(_channel, _control, value) {
     var group = LC6000Prime.currentGroup();
     if (LC6000Prime.state.shift) {
         if (LC6000Prime.isPress(value)) {
-            LC6000Prime.startTrackSearch(1);
-        } else {
-            LC6000Prime.stopTrackSearch();
+            LC6000Prime.shiftBeatgridHalf(1);
         }
         return;
     }
@@ -1166,7 +1228,7 @@ LC6000Prime.keyLock = function(_channel, _control, value) {
         return;
     }
     if (LC6000Prime.state.shift) {
-        LC6000Prime.trigger(group, "reset_key");
+        script.toggleControl(group, "quantize");
     } else {
         script.toggleControl(group, "keylock");
     }
@@ -1297,6 +1359,7 @@ LC6000Prime.jogLsb = function(_channel, _control, value) {
     var group = LC6000Prime.currentGroup();
     var jogValue = (LC6000Prime.state.jogMsb << 7) + value;
     var previousJogValue = LC6000Prime.state.previousJogValue;
+    var jogMultiplier = LC6000Prime.kJogNudgeMultiplier;
     var offset;
     var scaled;
 
@@ -1313,16 +1376,20 @@ LC6000Prime.jogLsb = function(_channel, _control, value) {
         offset += 16384;
     }
 
-    scaled = offset * LC6000Prime.state.jogSensitivity;
+    scaled = offset * LC6000Prime.currentJogSensitivityScale();
 
     if (engine.isScratching(deck)) {
-        engine.scratchTick(deck, scaled);
+        engine.scratchTick(deck, scaled * LC6000Prime.kScratchScale);
         return;
     }
     if (LC6000Prime.state.shift) {
         engine.setValue(group, "jog", scaled * LC6000Prime.kJogSeekMultiplier);
     } else {
-        engine.setValue(group, "jog", scaled * LC6000Prime.kJogNudgeMultiplier);
+        jogMultiplier *= LC6000Prime.kJogNudgeScale;
+        if (LC6000Prime.state.playIndicator) {
+            jogMultiplier *= LC6000Prime.kPlayingJogNudgeScale;
+        }
+        engine.setValue(group, "jog", scaled * jogMultiplier);
     }
 };
 
@@ -1363,7 +1430,7 @@ LC6000Prime.selectTurn = function(_channel, _control, value) {
     } else if (LC6000Prime.state.shift) {
         LC6000Prime.trigger(
                 LC6000Prime.currentGroup(),
-                direction > 0 ? "waveform_zoom_up" : "waveform_zoom_down");
+                direction > 0 ? "waveform_zoom_down" : "waveform_zoom_up");
     } else {
         engine.setValue("[Library]", "MoveVertical", direction);
     }
@@ -1401,6 +1468,16 @@ LC6000Prime.init = function(_id) {
     LC6000Prime.bindDeckConnections();
     LC6000Prime.refreshAll();
     console.log("LC6000Prime initialized for " + LC6000Prime.currentGroup());
+    console.log("LC6000Prime deck assignment: "
+            + LC6000Prime.state.deckAssignment
+            + ", color="
+            + LC6000Prime.state.deckColorSetting);
+    console.log("LC6000Prime jog sensitivity settings: vinyl="
+            + LC6000Prime.state.vinylJogSensitivity
+            + ", nonVinyl="
+            + LC6000Prime.state.nonVinylJogSensitivity
+            + ", vinylMode="
+            + LC6000Prime.state.vinylMode);
     console.log("Manual Loop saved slots and Slicer need hardware-validated Mixxx logic before full implementation.");
 };
 
