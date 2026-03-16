@@ -847,13 +847,21 @@ LC6000Prime.parameterForward = function(_channel, _control, value) {
 
 LC6000Prime.back = function(_channel, _control, value) {
     if (LC6000Prime.isPress(value)) {
-        engine.setValue("[Library]", "MoveFocusBackward", 1);
+        if (LC6000Prime.state.shift) {
+            engine.setValue("[Library]", "MoveFocusBackward", 1);
+        } else {
+            engine.setValue("[Tab]", "overview", 1);
+        }
     }
 };
 
 LC6000Prime.forward = function(_channel, _control, value) {
     if (LC6000Prime.isPress(value)) {
-        engine.setValue("[Library]", "MoveFocusForward", 1);
+        if (LC6000Prime.state.shift) {
+            engine.setValue("[Library]", "MoveFocusForward", 1);
+        } else {
+            engine.setValue("[Tab]", "library", 1);
+        }
     }
 };
 
@@ -878,6 +886,22 @@ LC6000Prime.selectPress = function(_channel, _control, value) {
         engine.setValue("[PreviewDeck1]", "LoadSelectedTrackAndPlay", 1);
     } else {
         engine.setValue(LC6000Prime.currentGroup(), "LoadSelectedTrack", 1);
+    }
+};
+
+LC6000Prime.selectTurn = function(_channel, _control, value) {
+    var direction = LC6000Prime.relativeSigned(value) < 0 ? -1 : 1;
+    if (LC6000Prime.state.selectPressed) {
+        LC6000Prime.state.selectTurnedWhilePressed = true;
+        LC6000Prime.trigger(
+                LC6000Prime.currentGroup(),
+                direction > 0 ? "waveform_zoom_down" : "waveform_zoom_up");
+    } else if (LC6000Prime.state.shift) {
+        LC6000Prime.trigger(
+                LC6000Prime.currentGroup(),
+                direction > 0 ? "waveform_zoom_down" : "waveform_zoom_up");
+    } else {
+        engine.setValue("[Library]", "MoveVertical", direction);
     }
 };
 
@@ -1094,22 +1118,6 @@ LC6000Prime.autoLoopTurn = function(_channel, _control, value) {
         return;
     }
     LC6000Prime.setSteppedControl(group, "beatloop_size", direction, LC6000Prime.kLoopSizeSteps);
-};
-
-LC6000Prime.selectTurn = function(_channel, _control, value) {
-    var direction = LC6000Prime.relativeSigned(value) < 0 ? -1 : 1;
-    if (LC6000Prime.state.selectPressed) {
-        LC6000Prime.state.selectTurnedWhilePressed = true;
-        LC6000Prime.trigger(
-                LC6000Prime.currentGroup(),
-                direction > 0 ? "waveform_zoom_up" : "waveform_zoom_down");
-    } else if (LC6000Prime.state.shift) {
-        LC6000Prime.trigger(
-                LC6000Prime.currentGroup(),
-                direction > 0 ? "waveform_zoom_down" : "waveform_zoom_up");
-    } else {
-        engine.setValue("[Library]", "MoveVertical", direction);
-    }
 };
 
 LC6000Prime.needleTouch = function(_channel, _control, value) {
