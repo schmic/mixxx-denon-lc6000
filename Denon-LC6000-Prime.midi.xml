@@ -21,11 +21,11 @@
             <value>Purple</value>
             <description>Color accent for the outer platter ring, based on the official LC6000 MIDI color examples.</description>
         </option>
-        <option variable="vinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Vinyl-Mode">
-            <description>Sensitivity factor for scratching with platter touch. 128 is the neutral midpoint and matches the previously usable value 16.</description>
+        <option variable="vinylJogSensitivity" type="integer" min="1" max="200" default="100" label="Jog sensitivity, Vinyl-Mode">
+            <description>Sensitivity factor for scratching with platter touch. 100 is the neutral midpoint, min is 1, max is 200.</description>
         </option>
-        <option variable="nonVinylJogSensitivity" type="integer" min="1" max="255" default="128" label="Jog sensitivity, Non-Vinyl-Mode">
-            <description>Sensitivity factor for non-touch wheel movement. 128 is the neutral midpoint and matches the previously usable value 2.</description>
+        <option variable="nonVinylJogSensitivity" type="integer" min="1" max="100" default="33" label="Jog sensitivity, Non-Vinyl-Mode">
+            <description>Sensitivity factor for non-touch wheel movement. 33 is the neutral midpoint, min is 1, max is 100.</description>
         </option>
         <option variable="vinylModeOn" type="boolean" default="true" label="Start in vinyl mode">
             <description>Whether the platter touch surface should enable scratching on startup.</description>
@@ -652,6 +652,26 @@
                 <description>Jog wheel upper byte</description>
                 <status>0xB0</status>
                 <midino>0x11</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogDirection</key>
+                <description>Jog wheel direction</description>
+                <status>0xB0</status>
+                <midino>0x37</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Channel1]</group>
+                <key>LC6000Prime.jogRotation</key>
+                <description>Jog wheel rotation</description>
+                <status>0xB0</status>
+                <midino>0x36</midino>
                 <options>
                     <script-binding/>
                 </options>

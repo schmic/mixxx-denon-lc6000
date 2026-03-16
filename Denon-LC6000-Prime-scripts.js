@@ -1,23 +1,15 @@
 var LC6000Prime = {};
 
 LC6000Prime.kRingBlinkIntervalMs = 400;
-LC6000Prime.kRingNearEndThreshold = 0.97;
+LC6000Prime.kRingNearEndThreshold = 0.90;
 LC6000Prime.kTrackSearchIntervalMs = 50;
 LC6000Prime.kTrackSearchStep = 0.01;
 LC6000Prime.kBeatgridHalfShift = 0.5;
-LC6000Prime.kJogTicksPerRevolution = 1100;
-LC6000Prime.kJogNudgeMultiplier = 4;
-LC6000Prime.kJogNudgeScale = 0.5;
-LC6000Prime.kPlayingJogNudgeScale = 0.5;
-LC6000Prime.kJogSeekMultiplier = 24;
-LC6000Prime.kJogSensitivityCenter = 128;
-LC6000Prime.kLegacyNudgeSensitivityReference = 2;
-LC6000Prime.kLegacyScratchSensitivityReference = 16;
-LC6000Prime.kShiftScratchMultiplier = 4;
-LC6000Prime.kScratchScale = 0.75;
+LC6000Prime.kRgbGamma = 3.5;
+
+LC6000Prime.kJogTicksPerRevolution = 1024;
 LC6000Prime.kScratchAlpha = 1 / 8;
 LC6000Prime.kScratchBeta = LC6000Prime.kScratchAlpha / 32;
-LC6000Prime.kRgbGamma = 3.5;
 
 LC6000Prime.kNotes = {
     play: 0x01,
@@ -162,8 +154,8 @@ LC6000Prime.state = {
     group: "[Channel1]",
     deckAssignment: "Deck 1",
     deckColorSetting: "Deck Default",
-    vinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
-    nonVinylJogSensitivity: LC6000Prime.kJogSensitivityCenter,
+    vinylJogSensitivity: 1,
+    nonVinylJogSensitivity: 0.33,
     vinylMode: true,
     padMode: "hotcue",
     trackLoaded: false,
@@ -184,9 +176,6 @@ LC6000Prime.state = {
     needleTouched: false,
     platterTouched: false,
     pitchMsb: 0,
-    jogMsb: 0,
-    previousJogValue: -1,
-    scratchRemainder: 0.0,
     deckColor: LC6000Prime.kDeckColors[1],
     ringColor: LC6000Prime.kDeckColors[1],
     ringBlinkVisible: true,
@@ -219,13 +208,6 @@ LC6000Prime.trigger = function(group, control) {
     script.triggerControl(group, control);
 };
 
-LC6000Prime.normalizeJogSensitivity = function(value) {
-    if (!Number.isInteger(value) || value < 1 || value > 255) {
-        return LC6000Prime.kJogSensitivityCenter;
-    }
-    return value;
-};
-
 LC6000Prime.normalizeDeckAssignment = function(value) {
     if (Object.prototype.hasOwnProperty.call(LC6000Prime.kDeckAssignments, value)) {
         return value;
@@ -240,26 +222,19 @@ LC6000Prime.normalizeDeckColorSetting = function(value) {
     return "Deck Default";
 };
 
-LC6000Prime.currentJogSensitivityScale = function() {
-    var setting = LC6000Prime.state.nonVinylJogSensitivity;
-    return (setting / LC6000Prime.kJogSensitivityCenter) *
-            (LC6000Prime.kLegacyNudgeSensitivityReference / LC6000Prime.kJogSensitivityCenter);
-};
-
-LC6000Prime.currentScratchSensitivityScale = function() {
-    var setting = LC6000Prime.state.vinylJogSensitivity;
-    return (setting / LC6000Prime.kJogSensitivityCenter) *
-            (LC6000Prime.kLegacyScratchSensitivityReference / LC6000Prime.kJogSensitivityCenter);
-};
+LC6000Prime.normalizeJogSensitivitySetting = function(value) {
+  return value / 100;
+}
 
 LC6000Prime.readJogSensitivitySettings = function() {
-    var vinylJogSetting = Number(engine.getSetting("vinylJogSensitivity"));
-    var nonVinylJogSetting = Number(engine.getSetting("nonVinylJogSensitivity"));
-    vinylJogSetting = LC6000Prime.normalizeJogSensitivity(vinylJogSetting);
-    nonVinylJogSetting = LC6000Prime.normalizeJogSensitivity(nonVinylJogSetting);
+    var vinylJogSensitivity = Number(engine.getSetting("vinylJogSensitivity"));
+    var nonVinylJogSensitivity = Number(engine.getSetting("nonVinylJogSensitivity"));
 
-    LC6000Prime.state.vinylJogSensitivity = vinylJogSetting;
-    LC6000Prime.state.nonVinylJogSensitivity = nonVinylJogSetting;
+    vinylJogSensitivity = LC6000Prime.normalizeJogSensitivitySetting(vinylJogSensitivity);
+    nonVinylJogSensitivity = LC6000Prime.normalizeJogSensitivitySetting(nonVinylJogSensitivity);
+
+    LC6000Prime.state.vinylJogSensitivity = vinylJogSensitivity;
+    LC6000Prime.state.nonVinylJogSensitivity = nonVinylJogSensitivity;
 };
 
 LC6000Prime.readSettings = function() {
@@ -267,21 +242,20 @@ LC6000Prime.readSettings = function() {
             String(engine.getSetting("deckAssignment") || "Deck 1"));
     var deckColorSetting = LC6000Prime.normalizeDeckColorSetting(
             String(engine.getSetting("deckColor") || "Deck Default"));
-    var vinylSetting = engine.getSetting("vinylModeOn");
     var deckNumber = LC6000Prime.kDeckAssignments[deckAssignmentSetting];
-
     LC6000Prime.state.deckNumber = deckNumber;
     LC6000Prime.state.group = "[Channel" + deckNumber + "]";
     LC6000Prime.state.deckAssignment = deckAssignmentSetting;
     LC6000Prime.state.deckColorSetting = deckColorSetting;
-    LC6000Prime.readJogSensitivitySettings();
-    LC6000Prime.state.previousJogValue = -1;
-    LC6000Prime.state.vinylMode = vinylSetting !== false && vinylSetting !== "false";
     LC6000Prime.state.deckColor =
             LC6000Prime.kDeckColorChoices[deckColorSetting] ||
             LC6000Prime.kDeckColors[deckNumber] ||
             LC6000Prime.kDeckColors[1];
     LC6000Prime.state.ringColor = LC6000Prime.state.deckColor;
+
+    var vinylSetting = engine.getSetting("vinylModeOn");
+    LC6000Prime.state.vinylMode = vinylSetting !== false && vinylSetting !== "false";
+    LC6000Prime.readJogSensitivitySettings();
 };
 
 LC6000Prime.sendShort = function(status, number, value) {
@@ -373,7 +347,6 @@ LC6000Prime.getLoopMoveSize = function(group) {
 
 LC6000Prime.toggleVinylMode = function() {
     LC6000Prime.state.vinylMode = !LC6000Prime.state.vinylMode;
-    LC6000Prime.syncScratchState();
     LC6000Prime.refreshTransportLeds();
 };
 
@@ -419,30 +392,6 @@ LC6000Prime.stopTrackSearch = function() {
 LC6000Prime.shiftBeatgridHalf = function(direction) {
     var control = direction < 0 ? "beats_translate_earlier" : "beats_translate_later";
     engine.setParameter(LC6000Prime.currentGroup(), control, LC6000Prime.kBeatgridHalfShift);
-};
-
-LC6000Prime.syncScratchState = function() {
-    var deck = LC6000Prime.currentDeck();
-    var shouldScratch = LC6000Prime.state.vinylMode &&
-            LC6000Prime.state.platterTouched;
-
-    if (shouldScratch) {
-        if (!engine.isScratching(deck)) {
-            LC6000Prime.state.scratchRemainder = 0.0;
-            engine.scratchEnable(
-                    deck,
-                    LC6000Prime.kJogTicksPerRevolution,
-                    33 + (1 / 3),
-                    LC6000Prime.kScratchAlpha,
-                    LC6000Prime.kScratchBeta);
-        }
-        return;
-    }
-
-    LC6000Prime.state.scratchRemainder = 0.0;
-    if (engine.isScratching(deck)) {
-        engine.scratchDisable(deck);
-    }
 };
 
 LC6000Prime.stopRingBlink = function() {
@@ -1005,7 +954,6 @@ LC6000Prime.pitchUp = function(_channel, _control, value) {
 
 LC6000Prime.shift = function(_channel, _control, value) {
     LC6000Prime.state.shift = value > 0;
-    LC6000Prime.syncScratchState();
     if (!LC6000Prime.state.shift) {
         LC6000Prime.stopTrackSearch();
     }
@@ -1070,64 +1018,55 @@ LC6000Prime.pad8 = function(_channel, _control, value) {
     LC6000Prime.applyPadPress(7, value);
 };
 
+
 LC6000Prime.platterTouch = function(_channel, _control, value) {
-    LC6000Prime.state.platterTouched = value > 0;
-    LC6000Prime.syncScratchState();
+  LC6000Prime.state.platterTouched = value > 0;
+
+  if(!LC6000Prime.state.vinylMode) {
+    return;
+  }
+
+  var deck = LC6000Prime.currentDeck();
+  if(LC6000Prime.state.platterTouched) {
+    engine.scratchEnable(
+            deck,
+            LC6000Prime.kJogTicksPerRevolution,
+            33 + (1 / 3),
+            LC6000Prime.kScratchAlpha,
+            LC6000Prime.kScratchBeta,
+            true);
+  }
+  else {
+    engine.scratchDisable(deck, true);
+  }
+};
+
+LC6000Prime.jogDirection = function(_channel, _control, value) {
+  LC6000Prime.state.jogDirection = value === 0;
+};
+
+LC6000Prime.jogRotation = function(_channel, _control, value) {
+  var group = LC6000Prime.currentGroup();
+  var deck = LC6000Prime.currentDeck();
+
+  var newValue = LC6000Prime.state.jogDirection ? value : (127 - value)*-1
+
+  if(engine.isScratching(deck)) {
+    newValue = newValue * LC6000Prime.state.vinylJogSensitivity;
+    engine.scratchTick(deck, newValue)
+  }
+  else {
+    newValue = newValue * LC6000Prime.state.nonVinylJogSensitivity;
+    engine.setValue(group, 'jog', newValue);
+  }
 };
 
 LC6000Prime.jogMsb = function(_channel, _control, value) {
-    LC6000Prime.state.jogMsb = value;
+  // unused, undocumented too?
 };
 
 LC6000Prime.jogLsb = function(_channel, _control, value) {
-    var deck = LC6000Prime.currentDeck();
-    var group = LC6000Prime.currentGroup();
-    var jogValue = (LC6000Prime.state.jogMsb << 7) + value;
-    var previousJogValue = LC6000Prime.state.previousJogValue;
-    var jogMultiplier = LC6000Prime.kJogNudgeMultiplier;
-    var offset;
-    var scaled;
-
-    LC6000Prime.state.previousJogValue = jogValue;
-
-    if (previousJogValue < 0) {
-        return;
-    }
-
-    offset = jogValue - previousJogValue;
-    if (offset > 8192) {
-        offset -= 16384;
-    } else if (offset < -8192) {
-        offset += 16384;
-    }
-
-    if (engine.isScratching(deck)) {
-        scaled = offset * LC6000Prime.currentScratchSensitivityScale();
-        LC6000Prime.state.scratchRemainder += scaled *
-                LC6000Prime.kScratchScale *
-                (LC6000Prime.state.shift ? LC6000Prime.kShiftScratchMultiplier : 1.0);
-
-        if (Math.abs(LC6000Prime.state.scratchRemainder) < 1.0) {
-            return;
-        }
-
-        scaled = LC6000Prime.state.scratchRemainder > 0
-                ? Math.floor(LC6000Prime.state.scratchRemainder)
-                : Math.ceil(LC6000Prime.state.scratchRemainder);
-        LC6000Prime.state.scratchRemainder -= scaled;
-        engine.scratchTick(deck, scaled);
-        return;
-    }
-    scaled = offset * LC6000Prime.currentJogSensitivityScale();
-    if (LC6000Prime.state.shift) {
-        engine.setValue(group, "jog", scaled * LC6000Prime.kJogSeekMultiplier);
-    } else {
-        jogMultiplier *= LC6000Prime.kJogNudgeScale;
-        if (LC6000Prime.state.playIndicator) {
-            jogMultiplier *= LC6000Prime.kPlayingJogNudgeScale;
-        }
-        engine.setValue(group, "jog", scaled * jogMultiplier);
-    }
+  // unused, undocumented too?
 };
 
 LC6000Prime.pitchMsb = function(_channel, _control, value) {
